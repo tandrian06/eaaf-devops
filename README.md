@@ -2,7 +2,7 @@
 
 EAAF DevOps is the AWS-first Architecture-to-Terraform module of the Enterprise Agentic AI Framework. It lives in a separate repository and uses EAAF Core as its governance layer for model calls.
 
-The current MVP turns a structured YAML file or a natural-language description into a reviewable architecture manifest for a stateless web service on AWS ECS Fargate. It reports missing decisions and conflicts with the supported pattern.
+The current MVP turns a structured YAML file or a natural-language description into a reviewable architecture manifest for a stateless web service on AWS ECS Fargate. It reports missing decisions and pattern conflicts. Once reviewed, a complete YAML manifest can be used to generate Terraform.
 
 ## Target architecture
 
@@ -23,8 +23,8 @@ flowchart LR
     end
 
     Intake -->|HTTP API · dedicated application key| Gateway
-    Result -.->|Human review| Generator["Terraform generation · planned"]
-    Generator -.-> Checks["Local checks and CI · planned"]
+    Result -->|Reviewed YAML| Generator["Terraform generation · pinned ALB and ECS modules"]
+    Generator --> Checks["Local checks and CI"]
     Checks -.-> Plan["AWS sandbox plan · planned"]
     Plan -.->|Separate approval| Apply["AWS deployment · later"]
 ```
@@ -37,10 +37,10 @@ Solid lines show the paths implemented today. Dashed lines show planned steps. E
 | --- | --- | --- | --- |
 | 1 | Architecture contract | Validate YAML against the ECS Fargate pattern and report missing inputs or conflicts. | Available |
 | 2 | Governed architecture intake | Draft a manifest from a description through the dedicated DevOps identity and apply the same validation as for YAML. | Available |
-| 3 | Terraform generation | Generate configuration from a reviewed manifest and a versioned pattern template. Run formatting and validation locally and in CI. | Planned |
+| 3 | Terraform generation | Compose pinned ALB and ECS modules from a reviewed YAML manifest. Check formatting and validate the generated configuration. | Available |
 | 4 | AWS sandbox plan | Compare the plan with the reviewed manifest and record the human decision before any apply. | Planned |
 
-Each increment has its own validation step. The first two can be exercised with fictional examples. Terraform generation will add a deterministic output to inspect, and the sandbox step will introduce AWS access for reviewing the plan. A deployment requires a separate approval.
+Each increment has its own validation step. The first three can be exercised with fictional examples. Terraform generation produces deterministic output, and the sandbox step will introduce AWS access for reviewing the plan. A deployment requires a separate approval.
 
 ## AWS ECS Fargate web service
 
@@ -82,6 +82,22 @@ python -m pytest -q
 | [Outside the pattern](examples/outside-pattern.yaml) | `unsupported` with an explanation | 3 |
 
 Unreadable or invalid input exits with code 1.
+
+## Generate Terraform from reviewed YAML
+
+Run from the repository root with Terraform installed. Use a fresh output file for each generation.
+
+```powershell
+New-Item -ItemType Directory -Force build | Out-Null
+python -m eaaf_devops examples/complete.yaml --terraform build/main.tf
+terraform -chdir=build fmt -check
+terraform -chdir=build init -backend=false -input=false
+terraform -chdir=build validate
+```
+
+The CLI revalidates the manifest before rendering a versioned template. It creates the output only for `ready_for_review` and refuses to overwrite a file. The template uses the community ALB module at `9.17.0`, the ECS cluster and service submodules at `6.0.0`, and the AWS provider at `6.0.0`. Initialization downloads these dependencies. Formatting and validation can run without AWS credentials.
+
+For a future sandbox plan, supply the workload name, existing ALB subnets in distinct Availability Zones, and the allowed client IPv4 CIDRs. A public ALB requires public ALB subnets. Fargate tasks use the manifest's private subnets and have no public IP. The template expects the existing network to provide the selected NAT or VPC endpoint connectivity and uses the supplied ACM certificate and ECR image. Arrange DNS for the output application domain in the existing DNS zone. The demo defaults to two tasks with 256 CPU units and 512 MiB of memory. The image must support a read-only root filesystem and return HTTP 200 on `/` for the ALB health check.
 
 ## Draft from a description
 

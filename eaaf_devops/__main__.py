@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from eaaf_devops.architecture import Architecture, review
 from eaaf_devops.intake import IntakeError, draft_architecture
+from eaaf_devops.terraform import write_terraform
 
 EXIT_BY_STATUS = {"ready_for_review": 0, "needs_input": 2, "unsupported": 3}
 
@@ -21,7 +22,10 @@ def main() -> int:
     command.add_argument("manifest", type=Path, nargs="?")
     command.add_argument("--schema", action="store_true", help="Print the version 1 JSON Schema.")
     command.add_argument("--describe", type=Path, metavar="FILE", help="Draft a manifest from a UTF-8 description.")
+    parser.add_argument("--terraform", type=Path, metavar="OUTPUT.tf", help="Generate Terraform from a YAML manifest.")
     args = parser.parse_args()
+    if args.terraform and (not args.manifest or args.terraform.suffix != ".tf"):
+        parser.error("--terraform requires a YAML manifest and a .tf output path")
     if args.schema:
         print(json.dumps(Architecture.model_json_schema(), indent=2))
         return 0
@@ -45,6 +49,12 @@ def main() -> int:
         return 1
 
     result = review(manifest)
+    if args.terraform and result.manifest.status == "ready_for_review":
+        try:
+            write_terraform(result, args.terraform)
+        except OSError as exc:
+            print(f"Could not write Terraform: {exc}", file=sys.stderr)
+            return 1
     print(yaml.safe_dump(result.model_dump(mode="json"), sort_keys=False), end="")
     return EXIT_BY_STATUS[result.manifest.status]
 
