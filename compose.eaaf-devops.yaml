@@ -1,0 +1,12 @@
+services:
+  gateway:
+    environment:
+      EAAF_DEVOPS_API_KEY: "${EAAF_DEVOPS_API_KEY:?Run scripts/configure_local_gateway.py first}"
+      EAAF_APPLICATIONS_CONFIG: /app/config/devops-applications.yaml
+    volumes:
+      - "${EAAF_DEVOPS_POLICIES:?Set EAAF_DEVOPS_POLICIES}:/app/config/devops-applications.yaml:ro"
+
+  litellm:
+    command: ["--config", /app/eaaf-devops.yaml, "--host", 0.0.0.0, "--port", "4000"]
+    volumes:
+      - "${EAAF_DEVOPS_ROOT:?Set EAAF_DEVOPS_ROOT}/config/litellm.devops.yaml:/app/eaaf-devops.yaml:ro"
