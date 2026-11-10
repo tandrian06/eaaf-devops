@@ -1,6 +1,46 @@
 # EAAF DevOps
 
-EAAF DevOps is the Architecture-to-Terraform module in the EAAF ecosystem. This increment defines the version 1 architecture manifest for one AWS pattern. It accepts structured YAML and returns a normalized manifest with review decisions.
+EAAF DevOps is the AWS-first Architecture-to-Terraform module of the Enterprise Agentic AI Framework. It lives in a separate repository and uses EAAF Core as its governance layer for model calls.
+
+The current MVP turns a structured YAML file or a natural-language description into a reviewable architecture manifest for a stateless web service on AWS ECS Fargate. It reports missing decisions and conflicts with the supported pattern.
+
+## Target architecture
+
+```mermaid
+flowchart LR
+    subgraph DevOps["EAAF DevOps · architecture workflow"]
+        Text["Natural-language description"] --> Intake["Architecture intake"]
+        YAML["Structured YAML"] --> Review["Manifest validation and pattern checks"]
+        Intake -->|Draft| Review
+        Review --> Result["Reviewed manifest and open decisions"]
+    end
+
+    subgraph Core["EAAF Core · Trust Layer"]
+        Gateway["Governance Gateway"]
+        LiteLLM["Model Switcher · LiteLLM Proxy"]
+        Gateway -->|Authorized model alias| LiteLLM
+        LiteLLM --> OpenAI["OpenAI · local demo option"]
+    end
+
+    Intake -->|HTTP API · dedicated application key| Gateway
+    Result -.->|Human review| Generator["Terraform generation · planned"]
+    Generator -.-> Checks["Local checks and CI · planned"]
+    Checks -.-> Plan["AWS sandbox plan · planned"]
+    Plan -.->|Separate approval| Apply["AWS deployment · later"]
+```
+
+Solid lines show the paths implemented today. Dashed lines show planned steps. EAAF Core authenticates DevOps and applies its model allowlist, quotas, simulated budget, and audit policy. DevOps owns the architecture schema, AWS pattern rules, and review status. The structured YAML path runs locally with Python and needs neither the Gateway nor an AWS account. The description path requires the local Gateway and sends the input to OpenAI through LiteLLM.
+
+## Components and delivery roadmap
+
+| Increment | Component | Demonstrable outcome | Status |
+| --- | --- | --- | --- |
+| 1 | Architecture contract | Validate YAML against the ECS Fargate pattern and report missing inputs or conflicts. | Available |
+| 2 | Governed architecture intake | Draft a manifest from a description through the dedicated DevOps identity and apply the same validation as for YAML. | Available |
+| 3 | Terraform generation | Generate configuration from a reviewed manifest and a versioned pattern template. Run formatting and validation locally and in CI. | Planned |
+| 4 | AWS sandbox plan | Compare the plan with the reviewed manifest and record the human decision before any apply. | Planned |
+
+Each increment has its own validation step. The first two can be exercised with fictional examples. Terraform generation will add a deterministic output to inspect, and the sandbox step will introduce AWS access for reviewing the plan. A deployment requires a separate approval.
 
 ## AWS ECS Fargate web service
 
@@ -42,15 +82,6 @@ python -m pytest -q
 | [Outside the pattern](examples/outside-pattern.yaml) | `unsupported` with an explanation | 3 |
 
 Unreadable or invalid input exits with code 1.
-
-## Incremental delivery
-
-1. **Architecture contract · available.** Review and validate structured manifests against the first AWS pattern.
-2. **Architecture intake · available.** Turn a description into a draft manifest through the EAAF Core HTTP API, using a dedicated application identity. The same validator reviews the draft.
-3. **Terraform output · planned.** Generate configuration from an approved manifest and versioned template. Run formatting and validation in CI.
-4. **AWS sandbox plan · planned.** Review the plan before making a separate decision to apply.
-
-The validator runs locally with Python and needs no AWS account.
 
 ## Draft from a description
 
