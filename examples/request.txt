@@ -1,0 +1,1 @@
+Je souhaite déployer sur AWS une API Docker sans état. Le conteneur écoute sur le port 8080 et le service doit être accessible en HTTPS. La région, le VPC et le niveau d'exposition ne sont pas encore décidés.

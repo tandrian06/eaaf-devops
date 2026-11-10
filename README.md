@@ -46,8 +46,22 @@ Unreadable or invalid input exits with code 1.
 ## Incremental delivery
 
 1. **Architecture contract · available.** Review and validate structured manifests against the first AWS pattern.
-2. **Architecture intake · next.** Turn a description into a draft manifest through the EAAF Core HTTP API, using a dedicated application identity. Keep the validator as the final check.
+2. **Architecture intake · available.** Turn a description into a draft manifest through the EAAF Core HTTP API, using a dedicated application identity. The same validator reviews the draft.
 3. **Terraform output · planned.** Generate configuration from an approved manifest and versioned template. Run formatting and validation in CI.
 4. **AWS sandbox plan · planned.** Review the plan before making a separate decision to apply.
 
-This increment runs locally with Python and needs no AWS account.
+The validator runs locally with Python and needs no AWS account.
+
+## Draft from a description
+
+Use an EAAF Core checkout with the optional OpenAI Compose configuration and a local `OPENAI_API_KEY`. From EAAF DevOps, prepare the dedicated key and a local policy overlay. This PowerShell example assumes sibling checkouts.
+
+```powershell
+python scripts/configure_local_gateway.py ../EAAF
+docker compose --env-file ../EAAF/.env --env-file .env -f ../EAAF/compose.yaml -f ../EAAF/compose.openai.yaml -f compose.eaaf-devops.yaml up --build --wait
+python -m eaaf_devops --describe examples/request.txt
+```
+
+The command sends the description through EAAF to OpenAI. Use synthetic descriptions for this demo. The call can incur API charges. The DevOps key and generated policy overlay stay in Git-ignored files. Core continues to serve its existing applications. The DevOps identity is authorized only for the dedicated architecture model alias.
+
+The result is a draft for review. It retains deployment identifiers only when they appear in the description, and the validator reports missing fields and pattern conflicts. The model can still misinterpret a request. Review the draft before using it as infrastructure input.

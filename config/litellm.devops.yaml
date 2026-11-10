@@ -1,0 +1,10 @@
+include:
+  - eaaf-openai.yaml
+
+model_list:
+  - model_name: eaaf-devops-architecture
+    litellm_params:
+      model: openai/gpt-4.1-mini
+      api_key: os.environ/OPENAI_API_KEY
+      max_tokens: 700
+      timeout: 12
