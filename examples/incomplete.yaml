@@ -1,0 +1,6 @@
+schema_version: 1
+pattern: aws-ecs-fargate-web
+application:
+  container_port: 8080
+ingress:
+  protocol: HTTPS

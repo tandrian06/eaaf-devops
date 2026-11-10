@@ -1,0 +1,21 @@
+schema_version: 1
+pattern: aws-ecs-fargate-web
+application:
+  container_port: 8080
+  image_uri: 123456789012.dkr.ecr.eu-west-3.amazonaws.com/demo-api:1.0.0
+  stateless: true
+aws:
+  region: eu-west-3
+  vpc_id: vpc-0123456789abcdef0
+ingress:
+  protocol: HTTPS
+  visibility: internal
+  domain_name: api.example.com
+  certificate_arn: arn:aws:acm:eu-west-3:123456789012:certificate/12345678-1234-1234-1234-123456789abc
+runtime:
+  platform: ecs-fargate
+  public_ip: false
+  private_subnet_ids:
+    - subnet-0123456789abcdef0
+    - subnet-0123456789abcdef1
+  outbound_access: vpc-endpoints
