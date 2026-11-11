@@ -2,9 +2,28 @@
 
 EAAF DevOps is the AWS-first Architecture-to-Terraform module of the Enterprise Agentic AI Framework. It lives in a separate repository and uses EAAF Core as its governance layer for model calls.
 
-The current MVP turns a structured YAML file or a natural-language description into a reviewable architecture manifest for a stateless web service on AWS ECS Fargate. It reports missing decisions and pattern conflicts. Once reviewed, a complete YAML manifest can be used to generate Terraform.
+The current MVP starts with a YAML description of one stateless HTTP container. The local workflow validates the YAML and generates a Terraform module call and its inputs.
 
-## Target architecture
+The deployment repository supplies the description, reviewed YAML, and prepared Terraform module. Generate into that repository by passing its module directory or a pinned GitHub module source. The [deployment demo](https://github.com/tandrian06/eaaf-deployment-demo) shows this workflow end to end. The [AWS sandbox guide](docs/aws-sandbox.md) documents the separate pilot with private networking and an internal load balancer.
+
+```powershell
+$demo = "..\eaaf-deployment-demo"
+.\.venv\Scripts\python.exe -m eaaf_devops --demo "$demo/examples/container-demo.yaml" --output "$demo/deployments/demo" --module-source "$demo/modules/aws-fargate-demo"
+```
+
+EAAF reads the module's Terraform declarations to discover input names, types, defaults, and outputs. Supply `region` for the AWS provider. An input with a module default can be omitted, and the generated call lets Terraform use that default. Terraform evaluates module-specific validation rules.
+
+To draft the YAML from a description, run `--describe-demo` with the same `--module-source` and the EAAF Gateway configured. Review the extracted values before generation. For a pinned GitHub module source, provide `--module-dir` pointing to a local checkout of that module revision.
+
+## Repositories
+
+| Repository | What it contains |
+| --- | --- |
+| [EAAF Core](https://github.com/tandrian06/eaaf) | Governance Gateway, LiteLLM routing, Chat, and department RAG. It governs model calls used to draft architecture from text. |
+| [EAAF DevOps](https://github.com/tandrian06/eaaf-devops) | Architecture intake, validation, and the reusable CLI that generates Terraform module calls and input files. |
+| [EAAF Deployment Demo](https://github.com/tandrian06/eaaf-deployment-demo) | A working example that takes reviewed YAML and a prepared Terraform module through generation, PR review, and an optional AWS Fargate deployment. |
+
+## Advanced architecture
 
 ```mermaid
 flowchart LR
@@ -25,8 +44,8 @@ flowchart LR
     Intake -->|HTTP API · dedicated application key| Gateway
     Result -->|Reviewed YAML| Generator["Terraform generation · pinned ALB and ECS modules"]
     Generator --> Checks["Local checks and CI"]
-    Checks -.-> Plan["AWS sandbox plan · planned"]
-    Plan -.->|Separate approval| Apply["AWS deployment · later"]
+    Checks --> Plan["AWS sandbox plan · local pilot"]
+    Plan -->|Manual approval and apply| Apply["AWS deployment · local pilot"]
 ```
 
 Solid lines show the paths implemented today. Dashed lines show planned steps. EAAF Core authenticates DevOps and applies its model allowlist, quotas, simulated budget, and audit policy. DevOps owns the architecture schema, AWS pattern rules, and review status. The structured YAML path runs locally with Python and needs neither the Gateway nor an AWS account. The description path requires the local Gateway and sends the input to OpenAI through LiteLLM.
@@ -38,9 +57,9 @@ Solid lines show the paths implemented today. Dashed lines show planned steps. E
 | 1 | Architecture contract | Validate YAML against the ECS Fargate pattern and report missing inputs or conflicts. | Available |
 | 2 | Governed architecture intake | Draft a manifest from a description through the dedicated DevOps identity and apply the same validation as for YAML. | Available |
 | 3 | Terraform generation | Compose pinned ALB and ECS modules from a reviewed YAML manifest. Check formatting and validate the generated configuration. | Available |
-| 4 | AWS sandbox plan | Compare the plan with the reviewed manifest and record the human decision before any apply. | Planned |
+| 4 | AWS sandbox pilot | Review the plan, verify running tasks and ALB target health, and clean up the resources. | Completed and cleaned up |
 
-Each increment has its own validation step. The first three can be exercised with fictional examples. Terraform generation produces deterministic output, and the sandbox step will introduce AWS access for reviewing the plan. A deployment requires a separate approval.
+Each increment has its own validation step. The first three can be exercised with fictional examples. Terraform generation produces deterministic output. The sandbox pilot uses real AWS access for planning, with human approval before apply. Its two tasks and ALB target health have been verified. Client HTTPS access and teardown remain to be validated.
 
 ## AWS ECS Fargate web service
 
@@ -97,7 +116,7 @@ terraform -chdir=build validate
 
 The CLI revalidates the manifest before rendering a versioned template. It creates the output only for `ready_for_review` and refuses to overwrite a file. The template uses the community ALB module at `9.17.0`, the ECS cluster and service submodules at `6.0.0`, and the AWS provider at `6.0.0`. Initialization downloads these dependencies. Formatting and validation can run without AWS credentials.
 
-For a future sandbox plan, supply the workload name, existing ALB subnets in distinct Availability Zones, and the allowed client IPv4 CIDRs. A public ALB requires public ALB subnets. Fargate tasks use the manifest's private subnets and have no public IP. The template expects the existing network to provide the selected NAT or VPC endpoint connectivity and uses the supplied ACM certificate and ECR image. Arrange DNS for the output application domain in the existing DNS zone. The demo defaults to two tasks with 256 CPU units and 512 MiB of memory. The image must support a read-only root filesystem and return HTTP 200 on `/` for the ALB health check.
+For a sandbox plan, supply the workload name, existing ALB subnets in distinct Availability Zones, and the allowed client IPv4 CIDRs. A public ALB requires public ALB subnets. Fargate tasks use the manifest's private subnets and have no public IP. The template expects the existing network to provide the selected NAT or VPC endpoint connectivity and uses the supplied ACM certificate and ECR image. Arrange DNS for the output application domain in the existing DNS zone. The demo defaults to two tasks with 256 CPU units and 512 MiB of memory. The image must support a read-only root filesystem and return HTTP 200 on `/` for the ALB health check.
 
 ## Draft from a description
 

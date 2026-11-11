@@ -1,0 +1,59 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CreateSandboxEndpoints",
+      "Effect": "Allow",
+      "Action": "ec2:CreateVpcEndpoint",
+      "Resource": [
+        "arn:aws:ec2:eu-north-1:<AWS_ACCOUNT_ID>:vpc/<VPC_ID>",
+        "arn:aws:ec2:eu-north-1:<AWS_ACCOUNT_ID>:subnet/<PRIVATE_SUBNET_A>",
+        "arn:aws:ec2:eu-north-1:<AWS_ACCOUNT_ID>:subnet/<PRIVATE_SUBNET_B>",
+        "arn:aws:ec2:eu-north-1:<AWS_ACCOUNT_ID>:route-table/<PRIVATE_ROUTE_TABLE_A>",
+        "arn:aws:ec2:eu-north-1:<AWS_ACCOUNT_ID>:route-table/<PRIVATE_ROUTE_TABLE_B>",
+        "arn:aws:ec2:eu-north-1:<AWS_ACCOUNT_ID>:security-group/*",
+        "arn:aws:ec2:eu-north-1:<AWS_ACCOUNT_ID>:vpc-endpoint/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "eu-north-1"
+        },
+        "StringEqualsIfExists": {
+          "ec2:VpceServiceName": [
+            "com.amazonaws.eu-north-1.ecr.api",
+            "com.amazonaws.eu-north-1.ecr.dkr",
+            "com.amazonaws.eu-north-1.logs",
+            "com.amazonaws.eu-north-1.s3"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "CreateEndpointSecurityGroup",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateSecurityGroup",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupEgress"
+      ],
+      "Resource": [
+        "arn:aws:ec2:eu-north-1:<AWS_ACCOUNT_ID>:vpc/<VPC_ID>",
+        "arn:aws:ec2:eu-north-1:<AWS_ACCOUNT_ID>:security-group/*"
+      ]
+    },
+    {
+      "Sid": "TagEndpointsAndSecurityGroupOnCreate",
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": [
+        "arn:aws:ec2:eu-north-1:<AWS_ACCOUNT_ID>:vpc-endpoint/*",
+        "arn:aws:ec2:eu-north-1:<AWS_ACCOUNT_ID>:security-group/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "ec2:CreateAction": ["CreateVpcEndpoint", "CreateSecurityGroup"]
+        }
+      }
+    }
+  ]
+}
