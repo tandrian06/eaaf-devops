@@ -1,0 +1,65 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublishOnlyTheSandboxImage",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:CreateRepository",
+        "ecr:DescribeRepositories",
+        "ecr:DescribeImages",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:PutImage",
+        "ecr:BatchGetImage"
+      ],
+      "Resource": "arn:aws:ecr:eu-north-1:<AWS_ACCOUNT_ID>:repository/eaaf-sandbox-demo"
+    },
+    {
+      "Sid": "AuthenticateToEcrInStockholm",
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "eu-north-1"
+        }
+      }
+    },
+    {
+      "Sid": "ImportTaggedSandboxCertificate",
+      "Effect": "Allow",
+      "Action": ["acm:ImportCertificate", "acm:AddTagsToCertificate"],
+      "Resource": "arn:aws:acm:eu-north-1:<AWS_ACCOUNT_ID>:certificate/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "EAAF",
+          "aws:RequestTag/Environment": "sandbox"
+        }
+      }
+    },
+    {
+      "Sid": "ReadSandboxCertificate",
+      "Effect": "Allow",
+      "Action": ["acm:DescribeCertificate", "acm:ListTagsForCertificate"],
+      "Resource": "arn:aws:acm:eu-north-1:<AWS_ACCOUNT_ID>:certificate/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/Project": "EAAF",
+          "aws:ResourceTag/Environment": "sandbox"
+        }
+      }
+    },
+    {
+      "Sid": "FindCertificateInStockholm",
+      "Effect": "Allow",
+      "Action": "acm:ListCertificates",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "aws:RequestedRegion": "eu-north-1" }
+      }
+    }
+  ]
+}

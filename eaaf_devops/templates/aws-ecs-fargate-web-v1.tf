@@ -110,6 +110,10 @@ module "cluster" {
   version = "6.0.0"
 
   name = var.name
+
+  default_capacity_provider_strategy = {
+    FARGATE = { weight = 1 }
+  }
 }
 
 module "service" {
