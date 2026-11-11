@@ -23,32 +23,25 @@ To draft the YAML from a description, run `--describe-demo` with the same `--mod
 | [EAAF DevOps](https://github.com/tandrian06/eaaf-devops) | Architecture intake, validation, and the reusable CLI that generates Terraform module calls and input files. |
 | [EAAF Deployment Demo](https://github.com/tandrian06/eaaf-deployment-demo) | A working example that takes reviewed YAML and a prepared Terraform module through generation, PR review, and an optional AWS Fargate deployment. |
 
-## Advanced architecture
+## Architecture-to-Terraform workflow
 
 ```mermaid
 flowchart LR
-    subgraph DevOps["EAAF DevOps · architecture workflow"]
-        Text["Natural-language description"] --> Intake["Architecture intake"]
-        YAML["Structured YAML"] --> Review["Manifest validation and pattern checks"]
-        Intake -->|Draft| Review
-        Review --> Result["Reviewed manifest and open decisions"]
-    end
-
-    subgraph Core["EAAF Core · Trust Layer"]
-        Gateway["Governance Gateway"]
-        LiteLLM["Model Switcher · LiteLLM Proxy"]
-        Gateway -->|Authorized model alias| LiteLLM
-        LiteLLM --> OpenAI["OpenAI · local demo option"]
-    end
-
-    Intake -->|HTTP API · dedicated application key| Gateway
-    Result -->|Reviewed YAML| Generator["Terraform generation · pinned ALB and ECS modules"]
-    Generator --> Checks["Local checks and CI"]
-    Checks --> Plan["AWS sandbox plan · local pilot"]
-    Plan -->|Manual approval and apply| Apply["AWS deployment · local pilot"]
+    Text["Optional description"] -->|"Draft via EAAF Core"| YAML["Reviewed YAML"]
+    YAML --> CLI["EAAF DevOps CLI"]
+    CLI --> TF["Terraform module call and inputs"]
 ```
 
-Solid lines show the paths implemented today. Dashed lines show planned steps. EAAF Core authenticates DevOps and applies its model allowlist, quotas, simulated budget, and audit policy. DevOps owns the architecture schema, AWS pattern rules, and review status. The structured YAML path runs locally with Python and needs neither the Gateway nor an AWS account. The description path requires the local Gateway and sends the input to OpenAI through LiteLLM.
+With reviewed YAML, generation runs locally. Drafting from text calls EAAF Core through a dedicated application identity. The Gateway enforces access and usage policy, then routes the request through LiteLLM to the configured model provider.
+
+## Two AWS Fargate paths
+
+| Path | AWS runtime | Entry point |
+| --- | --- | --- |
+| [Single-container demo](https://github.com/tandrian06/eaaf-deployment-demo) | One task in an ECS service using Fargate, in an existing public subnet | Direct HTTP to the task's public IP, restricted to the tester's IPv4 address |
+| [Advanced web-service pilot](docs/aws-sandbox.md) | Two ECS Fargate tasks in private subnets | HTTPS through an internal Application Load Balancer |
+
+The single-container demo uses a prepared module in the deployment repository. The advanced pilot uses pinned ALB and ECS modules and documents the private networking and IAM setup.
 
 ## Components and delivery roadmap
 
@@ -59,9 +52,9 @@ Solid lines show the paths implemented today. Dashed lines show planned steps. E
 | 3 | Terraform generation | Compose pinned ALB and ECS modules from a reviewed YAML manifest. Check formatting and validate the generated configuration. | Available |
 | 4 | AWS sandbox pilot | Review the plan, verify running tasks and ALB target health, and clean up the resources. | Completed and cleaned up |
 
-Each increment has its own validation step. The first three can be exercised with fictional examples. Terraform generation produces deterministic output. The sandbox pilot uses real AWS access for planning, with human approval before apply. Its two tasks and ALB target health have been verified. Client HTTPS access and teardown remain to be validated.
+Each increment has its own validation step. The first three can be exercised with fictional examples. Terraform generation produces deterministic output. The sandbox pilot uses real AWS access for planning, with human approval before apply. Its two tasks and ALB target health have been verified. Client HTTPS access was outside the completed pilot checks.
 
-## AWS ECS Fargate web service
+## Advanced ECS Fargate web-service pattern
 
 ```mermaid
 flowchart LR
@@ -85,7 +78,7 @@ The [version 1 schema](eaaf_devops/architecture.py) rejects unexpected fields an
 
 ## Run locally
 
-Use Python 3.12 and run from the repository root.
+Use Python 3.14, the version tested locally and in CI. Run these commands from the repository root.
 
 ```sh
 python -m pip install -r requirements-dev.txt
