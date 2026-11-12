@@ -15,6 +15,10 @@ EAAF reads the module's Terraform declarations to discover input names, types, d
 
 To draft the YAML from a description, run `--describe-demo` with the same `--module-source` and the EAAF Gateway configured. Review the extracted values before generation. For a pinned GitHub module source, provide `--module-dir` pointing to a local checkout of that module revision.
 
+## EAAF Core deployment on AWS
+
+The Architecture-to-Terraform demo deploys an example web container. The EAAF Core AWS PoC deploys the Governance Gateway, LiteLLM, and mock provider together on Fargate. It has its own Terraform configuration and uses Session Manager for private access. [EAAF Core AWS PoC](https://github.com/tandrian06/eaaf-core-aws-poc) **(private · GitHub access required)**.
+
 ## Repositories
 
 | Repository | What it contains |
