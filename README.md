@@ -4,7 +4,7 @@ EAAF DevOps is the AWS-first Architecture-to-Terraform module of the Enterprise 
 
 The current MVP starts with a YAML description of one stateless HTTP container. The local workflow validates the YAML and generates a Terraform module call and its inputs.
 
-The deployment repository supplies the description, reviewed YAML, and prepared Terraform module. Generate into that repository by passing its module directory or a pinned GitHub module source. The [deployment demo](https://github.com/tandrian06/eaaf-deployment-demo) shows this workflow end to end. The [AWS sandbox guide](docs/aws-sandbox.md) documents the separate pilot with private networking and an internal load balancer.
+The deployment repository supplies the description, reviewed YAML, and prepared Terraform module. Generate into that repository by passing its module directory or a pinned GitHub module source. The [deployment demo](https://github.com/tandrian06/eaaf-deployment-demo) **(private · GitHub access required)** shows this workflow end to end. The [AWS sandbox guide](docs/aws-sandbox.md) documents the separate pilot with private networking and an internal load balancer.
 
 ```powershell
 $demo = "..\eaaf-deployment-demo"
@@ -21,7 +21,9 @@ To draft the YAML from a description, run `--describe-demo` with the same `--mod
 | --- | --- |
 | [EAAF Core](https://github.com/tandrian06/eaaf) | Governance Gateway, LiteLLM routing, Chat, and department RAG. It governs model calls used to draft architecture from text. |
 | [EAAF DevOps](https://github.com/tandrian06/eaaf-devops) | Architecture intake, validation, and the reusable CLI that generates Terraform module calls and input files. |
-| [EAAF Deployment Demo](https://github.com/tandrian06/eaaf-deployment-demo) | A working example that takes reviewed YAML and a prepared Terraform module through generation, PR review, and an optional AWS Fargate deployment. |
+| [EAAF Deployment Demo](https://github.com/tandrian06/eaaf-deployment-demo) **(private · GitHub access required)** | A working example that takes reviewed YAML and a prepared Terraform module through generation, PR review, and an optional AWS Fargate deployment. |
+
+GitHub returns HTTP 404 for the private deployment demo when your account does not have access.
 
 ## Architecture-to-Terraform workflow
 
@@ -38,7 +40,7 @@ With reviewed YAML, generation runs locally. Drafting from text calls EAAF Core 
 
 | Path | AWS runtime | Entry point |
 | --- | --- | --- |
-| [Single-container demo](https://github.com/tandrian06/eaaf-deployment-demo) | One task in an ECS service using Fargate, in an existing public subnet | Direct HTTP to the task's public IP, restricted to the tester's IPv4 address |
+| [Single-container demo](https://github.com/tandrian06/eaaf-deployment-demo) **(private · GitHub access required)** | One task in an ECS service using Fargate, in an existing public subnet | Direct HTTP to the task's public IP, restricted to the tester's IPv4 address |
 | [Advanced web-service pilot](docs/aws-sandbox.md) | Two ECS Fargate tasks in private subnets | HTTPS through an internal Application Load Balancer |
 
 The single-container demo uses a prepared module in the deployment repository. The advanced pilot uses pinned ALB and ECS modules and documents the private networking and IAM setup.
